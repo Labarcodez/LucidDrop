@@ -1,0 +1,99 @@
+# ============================================================
+# GEM-TEAM CONFIGURATION
+# ============================================================
+# This file configures the gem-team orchestration system.
+# It controls agent behavior, security policies, and notifications
+# for the autonomous development framework.
+
+# ============================================================
+# ORCHESTRATOR
+# ============================================================
+# Global settings for the orchestration engine.
+orchestrator:
+  # Minimum complexity threshold for creating durable plans.
+  # Values: TRIVIAL | LOW | MEDIUM | HIGH
+  default_complexity_threshold: MEDIUM
+
+  # Maximum number of agents that can run concurrently.
+  # Higher values improve throughput but may hit rate limits.
+  max_concurrent_agents: 2
+
+  # When true, tasks with complexity TRIVIAL are auto-approved
+  # without requiring user confirmation.
+  auto_approve_trivial: true
+
+# ============================================================
+# AGENTS
+# ============================================================
+# List of available agents and their runtime settings.
+agents:
+  # RESEARCHER - Codebase exploration, pattern discovery
+  - name: gem-researcher
+    enabled: true
+    max_tokens: 4096
+
+  # PLANNER - Task decomposition, DAG creation, scheduling
+  - name: gem-planner
+    enabled: true
+    max_tokens: 4096
+
+  # IMPLEMENTER - TDD code implementation, features, bug fixes
+  - name: gem-implementer
+    enabled: true
+    max_tokens: 8192  # Higher token budget for code generation
+
+  # REVIEWER - Security auditing, code review, compliance checks
+  - name: gem-reviewer
+    enabled: true
+    max_tokens: 4096
+
+  # DOCUMENTATION-WRITER - Technical docs, READMEs, guides
+  - name: gem-documentation-writer
+    enabled: true
+    max_tokens: 4096
+
+  # DEVOPS - CI/CD pipelines, infrastructure, deployment
+  - name: gem-devops
+    enabled: true
+    max_tokens: 4096
+
+  # DEBUGGER - Root-cause analysis, stack trace diagnosis
+  - name: gem-debugger
+    enabled: true
+    max_tokens: 4096
+
+# ============================================================
+# SECURITY
+# ============================================================
+# Security policies for code scanning and secret handling.
+security:
+  # Scan files for secrets and sensitive information
+  secrets_scanning: true
+
+  # File patterns that trigger security warnings
+  sensitive_file_patterns:
+    - "*.key"        # Private key files
+    - "*.pem"        # PEM certificate files
+    - "*secret*"     # Any file with 'secret' in the name
+    - "*.env"        # Environment variable files
+
+  # Automatically redact sensitive values in logs and outputs
+  auto_redact: true
+
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
+# Alert and notification settings for the orchestration system.
+notifications:
+  # Send notification when a task completes successfully
+  on_task_complete: true
+
+  # Send notification when a task fails
+  on_task_failure: true
+
+  # Send notification when a task requires approval
+  on_approval_needed: true
+
+  # Output channel for notifications
+  # Values: console | slack | discord | email
+  channel: console

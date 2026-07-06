@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: luciddrop-backend
+    runtime: node
+    plan: free
+    region: ohio
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: SOLANA_RPC_URL
+        sync: false
+      - key: WALLET_PRIVATE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /health
+    autoDeploy: true

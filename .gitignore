@@ -1,0 +1,39 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+smart-contract/.env
+
+# Casino wallet private key (CRITICAL: DO NOT COMMIT)
+backend/casino-wallet.json
+**/casino-wallet.json
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# MongoDB data
+data/
+*.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp

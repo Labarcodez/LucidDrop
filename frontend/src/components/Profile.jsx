@@ -6,13 +6,16 @@ import { StatisticsDashboard } from './StatisticsDashboard';
 import { GamblingLimits } from './GamblingLimits';
 
 export const Profile = ({ isOpen, onClose }) => {
-  const { publicKey, balance } = useCasinoStore();
-  const { disconnect } = useWallet();
+  const { balance } = useCasinoStore();
+  const { publicKey, connected, disconnect } = useWallet();
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showLimits, setShowLimits] = useState(false);
 
   if (!isOpen) return null;
+
+  const walletAddress = publicKey?.toString();
+  const isConnected = connected && !!walletAddress;
 
   const copyAddress = () => {
     if (publicKey) {
@@ -31,17 +34,21 @@ export const Profile = ({ isOpen, onClose }) => {
             </div>
             <div>
               <div className="text-sm font-mono text-[#00ff88]">
-                {publicKey ? `${publicKey.toString().slice(0, 6)}...${publicKey.toString().slice(-6)}` : 'Not connected'}
+                {isConnected
+                  ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-6)}`
+                  : 'Not connected'}
               </div>
-              <div className="text-xs text-gray-400">Balance: {balance.toFixed(4)} SOL</div>
+              <div className="text-xs text-gray-400">
+                {isConnected ? `Balance: ${balance.toFixed(4)} SOL` : 'Connect wallet to view balance'}
+              </div>
             </div>
           </div>
 
           <div className="bg-black/60 p-3 rounded-lg border border-gray-700 flex justify-between items-center mb-4">
             <span className="font-mono text-xs text-gray-300 truncate">
-              {publicKey?.toString() || 'No wallet connected'}
+              {walletAddress || 'No wallet connected'}
             </span>
-            {publicKey && (
+            {isConnected && (
               <button
                 onClick={copyAddress}
                 className="px-3 py-1 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] text-xs"

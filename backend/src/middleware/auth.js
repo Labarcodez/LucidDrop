@@ -1,7 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { PublicKey } = require('@solana/web3.js');
 const nacl = require('tweetnacl');
-const bs58 = require('bs58');
+const bs58Module = require('bs58');
+// bs58 v6 exposes encode/decode on .default; v4 uses the module directly
+const bs58 = bs58Module.default || bs58Module;
 
 /**
  * Verify a wallet signature for authentication
@@ -12,11 +14,20 @@ const bs58 = require('bs58');
  */
 function verifyWalletSignature(message, signature, publicKey) {
   try {
+    if (!message || !signature || !publicKey) {
+      return false;
+    }
+
     const messageBytes = new TextEncoder().encode(message);
     const signatureBytes = bs58.decode(signature);
     const publicKeyBytes = new PublicKey(publicKey).toBytes();
+
+    if (signatureBytes.length !== 64) {
+      return false;
+    }
+
     return nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
-  } catch {
+  } catch (error) {
     return false;
   }
 }

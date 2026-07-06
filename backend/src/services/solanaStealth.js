@@ -1,5 +1,6 @@
 const { Connection, Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = require('@solana/web3.js');
-const bs58 = require('bs58');
+const bs58Module = require('bs58');
+const bs58 = bs58Module.default || bs58Module;
 
 /**
  * Transfer SOL from the casino wallet to a user's wallet

@@ -1,4 +1,5 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { verifyWalletSignature, generateToken } = require('../middleware/auth');
 const User = require('../models/User');

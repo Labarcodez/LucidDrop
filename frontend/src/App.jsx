@@ -6,7 +6,9 @@ import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 import toast, { Toaster } from 'react-hot-toast';
-import * as bs58 from 'bs58';
+import * as bs58Module from 'bs58';
+
+const bs58 = bs58Module.default || bs58Module;
 
 import { Layout } from './components/Layout';
 import { lazy, Suspense } from 'react';
@@ -42,6 +44,14 @@ function AppContent() {
   
   // Enable periodic balance synchronization
   const { forceSync } = useBalanceSync({ enabled: true });
+
+  // Keep store wallet in sync with adapter connection state
+  useEffect(() => {
+    setWallet(wallet.publicKey ?? null);
+    if (!wallet.publicKey) {
+      setBalance(0);
+    }
+  }, [wallet.publicKey, setWallet, setBalance]);
 
   // Auto-connect with stored token
   useEffect(() => {
@@ -95,10 +105,16 @@ function AppContent() {
         
         // Sign the message with wallet
         const encodedMessage = new TextEncoder().encode(message);
-        const signature = await wallet.signMessage(encodedMessage);
-        
-        // Convert signature to base58
-        const signatureBase58 = bs58.default.encode(signature);
+        const signResult = await wallet.signMessage(encodedMessage);
+        const signatureBytes = signResult instanceof Uint8Array
+          ? signResult
+          : signResult?.signature;
+
+        if (!signatureBytes) {
+          throw new Error('Wallet did not return a signature');
+        }
+
+        const signatureBase58 = bs58.encode(signatureBytes);
         
         // Send to backend for verification
         const loginResponse = await api.login(wallet.publicKey.toString(), signatureBase58, message);
@@ -133,26 +149,6 @@ function AppContent() {
       }
     }
   }, [wallet.publicKey, wallet.signMessage, setWallet, setBalance]);
-
-  // Fetch user data when wallet connects (fallback if token auth fails)
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (wallet.publicKey) {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
-        if (!token) {
-          // If no token, try to get user data without auth (legacy mode)
-          try {
-            const response = await api.getUser(wallet.publicKey.toString());
-            setBalance(response.data.balance);
-          } catch (error) {
-            console.error('Failed to fetch user data:', error);
-            setBalance(5.0);
-          }
-        }
-      }
-    };
-    fetchUserData();
-  }, [wallet.publicKey, setBalance]);
 
   // Join WebSocket room for this wallet
   useEffect(() => {
@@ -235,8 +231,13 @@ function AppContent() {
 }
 
 export default function App() {
-  const network = WalletAdapterNetwork.Mainnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const network = process.env.REACT_APP_SOLANA_NETWORK === 'mainnet-beta'
+    ? WalletAdapterNetwork.Mainnet
+    : WalletAdapterNetwork.Devnet;
+  const endpoint = useMemo(
+    () => process.env.REACT_APP_SOLANA_RPC || clusterApiUrl(network),
+    [network],
+  );
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
   return (

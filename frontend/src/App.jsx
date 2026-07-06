@@ -1,252 +1,285 @@
-import React, { useMemo, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { clusterApiUrl } from '@solana/web3.js';
-import toast, { Toaster } from 'react-hot-toast';
-import * as bs58Module from 'bs58';
-
-const bs58 = bs58Module.default || bs58Module;
-
-import { Layout } from './components/Layout';
-import { lazy, Suspense } from 'react';
-
-const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
-const SlotsPage = lazy(() => import('./pages/SlotsPage').then(module => ({ default: module.SlotsPage })));
-const CrashPage = lazy(() => import('./pages/CrashPage').then(module => ({ default: module.CrashPage })));
-const CoinFlipPage = lazy(() => import('./pages/CoinFlipPage').then(module => ({ default: module.CoinFlipPage })));
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { Particles } from './components/Particles';
-import { HotStreak } from './components/HotStreak';
-import { DepositModal } from './components/DepositModal';
-import { Profile } from './components/Profile';
-import { useCasinoStore } from './store/useCasinoStore';
-import { api } from './services/api';
-import { useWebSocket } from './hooks/useWebSocket';
-import { useBalanceSync } from './hooks/useBalanceSync';
-
-import '@solana/wallet-adapter-react-ui/styles.css';
-
-// Auth helper functions
-const AUTH_TOKEN_KEY = 'luciddrop_auth_token';
-const AUTH_WALLET_KEY = 'luciddrop_auth_wallet';
-
-function AppContent() {
-  const wallet = useWallet();
-  const setWallet = useCasinoStore((state) => state.setWallet);
-  const setBalance = useCasinoStore((state) => state.setBalance);
-  const [showDeposit, setShowDeposit] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const { send, messages } = useWebSocket();
-  
-  // Enable periodic balance synchronization
-  const { forceSync } = useBalanceSync({ enabled: true });
-
-  // Keep store wallet in sync with adapter connection state
-  useEffect(() => {
-    setWallet(wallet.publicKey ?? null);
-    if (!wallet.publicKey) {
-      setBalance(0);
-    }
-  }, [wallet.publicKey, setWallet, setBalance]);
-
-  // Auto-connect with stored token
-  useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    const savedWallet = localStorage.getItem(AUTH_WALLET_KEY);
-    
-    if (token && savedWallet && wallet.publicKey) {
-      const walletAddress = wallet.publicKey.toString();
-      if (walletAddress === savedWallet) {
-        // Token exists, validate with backend
-        api.validateToken(token).then((response) => {
-          if (response.data.valid) {
-            setWallet(wallet.publicKey);
-            setBalance(response.data.balance);
-            toast.success('✅ Auto-connected');
-          }
-        }).catch(() => {
-          // Token invalid, clear it
-          localStorage.removeItem(AUTH_TOKEN_KEY);
-          localStorage.removeItem(AUTH_WALLET_KEY);
-        });
-      }
-    }
-  }, [wallet.publicKey, setWallet, setBalance]);
-
-  // Handle wallet connection with sign message
-  useEffect(() => {
-    const handleWalletAuth = async () => {
-      if (!wallet.publicKey || !wallet.signMessage || isAuthenticating) return;
-      
-      // Check if already authenticated for this wallet
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      const savedWallet = localStorage.getItem(AUTH_WALLET_KEY);
-      if (token && savedWallet === wallet.publicKey.toString()) {
-        // Already have a token, just set the wallet
-        setWallet(wallet.publicKey);
-        try {
-          const response = await api.getUser(wallet.publicKey.toString());
-          setBalance(response.data.balance);
-        } catch (error) {
-          console.error('Failed to fetch user data:', error);
-        }
-        return;
-      }
-
-      // Get challenge from backend
-      setIsAuthenticating(true);
-      try {
-        const challengeResponse = await api.getChallenge(wallet.publicKey.toString());
-        const message = challengeResponse.data.message;
-        
-        // Sign the message with wallet
-        const encodedMessage = new TextEncoder().encode(message);
-        const signResult = await wallet.signMessage(encodedMessage);
-        const signatureBytes = signResult instanceof Uint8Array
-          ? signResult
-          : signResult?.signature;
-
-        if (!signatureBytes) {
-          throw new Error('Wallet did not return a signature');
-        }
-
-        const signatureBase58 = bs58.encode(signatureBytes);
-        
-        // Send to backend for verification
-        const loginResponse = await api.login(wallet.publicKey.toString(), signatureBase58, message);
-        
-        if (loginResponse.data.success) {
-          // Store token and wallet address
-          localStorage.setItem(AUTH_TOKEN_KEY, loginResponse.data.token);
-          localStorage.setItem(AUTH_WALLET_KEY, wallet.publicKey.toString());
-          
-          setWallet(wallet.publicKey);
-          setBalance(loginResponse.data.balance);
-          toast.success('✅ Authenticated successfully!');
-        }
-      } catch (error) {
-        console.error('Authentication error:', error);
-        toast.error(error.response?.data?.error || 'Authentication failed. Please try again.');
-        // Clear any invalid auth state
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem(AUTH_WALLET_KEY);
-      } finally {
-        setIsAuthenticating(false);
-      }
-    };
-
-    // Only trigger auth if wallet is connected and we're not already authenticating
-    if (wallet.publicKey && wallet.signMessage) {
-      // Check if we need to authenticate
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      const savedWallet = localStorage.getItem(AUTH_WALLET_KEY);
-      if (!token || savedWallet !== wallet.publicKey.toString()) {
-        handleWalletAuth();
-      }
-    }
-  }, [wallet.publicKey, wallet.signMessage, setWallet, setBalance]);
-
-  // Join WebSocket room for this wallet
-  useEffect(() => {
-    if (wallet.publicKey) {
-      send({ type: 'join', walletAddress: wallet.publicKey.toString() });
-    }
-  }, [wallet.publicKey, send]);
-
-  // Listen for deposit messages from WebSocket
-  useEffect(() => {
-    const depositMsg = messages.find(m => m.type === 'deposit');
-    if (depositMsg) {
-      toast.success(`✅ Deposit of ${depositMsg.amount} SOL received!`);
-      // Refetch user balance
-      const refetch = async () => {
-        try {
-          const response = await api.getUser(wallet.publicKey.toString());
-          setBalance(response.data.balance);
-        } catch (e) { console.error(e); }
-      };
-      refetch();
-    }
-  }, [messages, wallet.publicKey, setBalance]);
-
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_WALLET_KEY);
-    setWallet(null);
-    setBalance(0);
-    toast.success('Logged out');
-  };
-
-  return (
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
-      <Particles />
-      <HotStreak />
-      
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#0d0d14',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '12px',
-          },
-        }}
-      />
-
-      <button data-deposit onClick={() => setShowDeposit(true)} className="hidden" />
-      <button data-profile onClick={() => setShowProfile(true)} className="hidden" />
-      
-      <DepositModal isOpen={showDeposit} onClose={() => setShowDeposit(false)} />
-      <Profile isOpen={showProfile} onClose={() => setShowProfile(false)} />
-
-      <ErrorBoundary>
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-[#00ff88] text-xl font-mono animate-pulse">Loading...</div>
-          </div>
-        }>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="slots" element={<SlotsPage />} />
-              <Route path="crash" element={<CrashPage />} />
-              <Route path="coinflip" element={<CoinFlipPage />} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </ErrorBoundary>
-    </BrowserRouter>
-  );
-}
-
-export default function App() {
-  const network = process.env.REACT_APP_SOLANA_NETWORK === 'mainnet-beta'
-    ? WalletAdapterNetwork.Mainnet
-    : WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(
-    () => process.env.REACT_APP_SOLANA_RPC || clusterApiUrl(network),
-    [network],
-  );
-  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
-
-  return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          <AppContent />
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
-  );
-}
+import React, { useMemo, useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { clusterApiUrl } from '@solana/web3.js';
+import toast, { Toaster } from 'react-hot-toast';
+import bs58 from 'bs58';
+import { io } from 'socket.io-client';
+
+import { Layout } from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Particles } from './components/Particles';
+import { HotStreak } from './components/HotStreak';
+import { DepositModal } from './components/DepositModal';
+import { Profile } from './components/Profile';
+import { useCasinoStore } from './store/useCasinoStore';
+import { api, AUTH_TOKEN_KEY, AUTH_WALLET_KEY } from './services/api';
+import { useBalanceSync } from './hooks/useBalanceSync';
+
+import '@solana/wallet-adapter-react-ui/styles.css';
+
+const Home = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
+const SlotsPage = lazy(() => import('./pages/SlotsPage').then((module) => ({ default: module.SlotsPage })));
+const CrashPage = lazy(() => import('./pages/CrashPage').then((module) => ({ default: module.CrashPage })));
+const CoinFlipPage = lazy(() => import('./pages/CoinFlipPage').then((module) => ({ default: module.CoinFlipPage })));
+
+const getSocketUrl = () => {
+  if (process.env.REACT_APP_WS_URL) {
+    return process.env.REACT_APP_WS_URL.replace(/^ws/, 'http');
+  }
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  return apiUrl.replace(/\/api\/?$/, '');
+};
+
+function normalizeSignature(signResult) {
+  if (signResult instanceof Uint8Array) {
+    return signResult;
+  }
+  if (signResult?.signature instanceof Uint8Array) {
+    return signResult.signature;
+  }
+  if (Array.isArray(signResult)) {
+    return Uint8Array.from(signResult);
+  }
+  if (signResult?.signature && Array.isArray(signResult.signature)) {
+    return Uint8Array.from(signResult.signature);
+  }
+  return null;
+}
+
+function AppContent() {
+  const wallet = useWallet();
+  const setWallet = useCasinoStore((state) => state.setWallet);
+  const setAuth = useCasinoStore((state) => state.setAuth);
+  const setBalance = useCasinoStore((state) => state.setBalance);
+  const clearAuth = useCasinoStore((state) => state.clearAuth);
+  const isAuthenticated = useCasinoStore((state) => state.isAuthenticated);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const authAttemptRef = useRef(false);
+  const socketRef = useRef(null);
+
+  useBalanceSync({ enabled: isAuthenticated });
+
+  useEffect(() => {
+    setWallet(wallet.publicKey ?? null);
+    if (!wallet.publicKey) {
+      clearAuth();
+    }
+  }, [wallet.publicKey, setWallet, clearAuth]);
+
+  useEffect(() => {
+    const socket = io(getSocketUrl(), { transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+
+    socket.on('deposit', (payload) => {
+      toast.success(`✅ Deposit of ${payload.amount} SOL received!`);
+      api.getMe()
+        .then((response) => {
+          const user = response.data.user || response.data;
+          if (user?.balance !== undefined) {
+            setBalance(user.balance);
+          }
+        })
+        .catch(() => {});
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [setBalance]);
+
+  useEffect(() => {
+    if (wallet.publicKey && socketRef.current?.connected) {
+      socketRef.current.emit('join', wallet.publicKey.toString());
+    }
+  }, [wallet.publicKey, isAuthenticated]);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const savedWallet = localStorage.getItem(AUTH_WALLET_KEY);
+
+      if (!token || !savedWallet || !wallet.publicKey) return;
+      if (wallet.publicKey.toString() !== savedWallet) return;
+
+      try {
+        const response = await api.validateToken(token);
+        if (response.data.valid) {
+          setAuth({
+            token,
+            walletAddress: savedWallet,
+            balance: response.data.balance,
+            publicKey: wallet.publicKey,
+          });
+        }
+      } catch {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(AUTH_WALLET_KEY);
+      }
+    };
+
+    restoreSession();
+  }, [wallet.publicKey, setAuth]);
+
+  useEffect(() => {
+    const authenticateWallet = async () => {
+      if (!wallet.publicKey || !wallet.signMessage || isAuthenticating || authAttemptRef.current) {
+        return;
+      }
+
+      const walletAddress = wallet.publicKey.toString();
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const savedWallet = localStorage.getItem(AUTH_WALLET_KEY);
+
+      if (token && savedWallet === walletAddress && isAuthenticated) {
+        try {
+          const response = await api.getMe();
+          const user = response.data.user || response.data;
+          setAuth({
+            token,
+            walletAddress,
+            balance: user.balance,
+            publicKey: wallet.publicKey,
+          });
+        } catch {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          localStorage.removeItem(AUTH_WALLET_KEY);
+        }
+        return;
+      }
+
+      if (token && savedWallet === walletAddress) {
+        return;
+      }
+
+      authAttemptRef.current = true;
+      setIsAuthenticating(true);
+
+      try {
+        const challengeResponse = await api.getChallenge(walletAddress);
+        const message = challengeResponse.data.message;
+        const messageBytes = new TextEncoder().encode(message);
+        const signResult = await wallet.signMessage(messageBytes);
+        const signatureBytes = normalizeSignature(signResult);
+
+        if (!signatureBytes) {
+          throw new Error('Wallet did not return a signature');
+        }
+
+        const signatureBase58 = bs58.encode(signatureBytes);
+        const loginResponse = await api.login(walletAddress, signatureBase58, message);
+
+        if (loginResponse.data.success) {
+          setAuth({
+            token: loginResponse.data.token,
+            walletAddress,
+            balance: loginResponse.data.balance,
+            publicKey: wallet.publicKey,
+          });
+          toast.success('✅ Authenticated successfully!');
+          socketRef.current?.emit('join', walletAddress);
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        const message =
+          error.response?.data?.error ||
+          error.message ||
+          'Authentication failed. Please try again.';
+        toast.error(message);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(AUTH_WALLET_KEY);
+      } finally {
+        setIsAuthenticating(false);
+        authAttemptRef.current = false;
+      }
+    };
+
+    if (wallet.connected && wallet.publicKey && wallet.signMessage) {
+      authenticateWallet();
+    }
+  }, [
+    wallet.connected,
+    wallet.publicKey,
+    wallet.signMessage,
+    isAuthenticating,
+    isAuthenticated,
+    setAuth,
+  ]);
+
+  return (
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <Particles />
+      <HotStreak />
+
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#0d0d14',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+          },
+        }}
+      />
+
+      <button data-deposit onClick={() => setShowDeposit(true)} className="hidden" />
+      <button data-profile onClick={() => setShowProfile(true)} className="hidden" />
+
+      <DepositModal isOpen={showDeposit} onClose={() => setShowDeposit(false)} />
+      <Profile isOpen={showProfile} onClose={() => setShowProfile(false)} />
+
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-[#00ff88] text-xl font-mono animate-pulse">Loading...</div>
+            </div>
+          }
+        >
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="slots" element={<SlotsPage />} />
+              <Route path="crash" element={<CrashPage />} />
+              <Route path="coinflip" element={<CoinFlipPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    </BrowserRouter>
+  );
+}
+
+export default function App() {
+  const network =
+    process.env.REACT_APP_SOLANA_NETWORK === 'mainnet-beta'
+      ? WalletAdapterNetwork.Mainnet
+      : WalletAdapterNetwork.Devnet;
+  const endpoint = useMemo(
+    () => process.env.REACT_APP_SOLANA_RPC || clusterApiUrl(network),
+    [network],
+  );
+  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
+
+  return (
+    <ConnectionProvider endpoint={endpoint}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <AppContent />
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
+  );
+}
+

@@ -12,6 +12,10 @@ const logger = require('../utils/logger');
 router.post('/', authenticate, async (req, res) => {
   const { walletAddress, amount } = req.body;
 
+  if (req.user.walletAddress !== walletAddress) {
+    return res.status(403).json({ error: 'Wallet address does not match authenticated user' });
+  }
+
   // Validate input
   if (!walletAddress) {
     return res.status(400).json({ error: 'Wallet address is required' });

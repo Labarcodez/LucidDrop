@@ -3,7 +3,7 @@ import { useCasinoStore } from '../store/useCasinoStore';
 import { api } from '../services/api';
 
 export const GamblingLimits = () => {
-  const { publicKey, token } = useCasinoStore();
+  const { publicKey, isAuthenticated } = useCasinoStore();
   const [limits, setLimits] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -18,16 +18,14 @@ export const GamblingLimits = () => {
   const [selfExcludeReason, setSelfExcludeReason] = useState('');
 
   const fetchLimits = async () => {
-    if (!publicKey || !token) {
+    if (!publicKey || !isAuthenticated) {
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await api.get('/users/limits', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/users/limits');
       if (response.data.success) {
         const data = response.data.limits;
         setLimits(data);
@@ -46,7 +44,7 @@ export const GamblingLimits = () => {
 
   useEffect(() => {
     fetchLimits();
-  }, [publicKey, token]);
+  }, [publicKey, isAuthenticated]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -71,9 +69,7 @@ export const GamblingLimits = () => {
         };
       }
 
-      const response = await api.put('/users/limits', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.put('/users/limits', payload);
 
       if (response.data.success) {
         setSuccess(true);

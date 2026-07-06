@@ -126,7 +126,7 @@ export const DegenCrash = React.memo(() => {
           }, 50);
         } catch (error) {
           console.error('Crash result error:', error);
-          toast.error('Failed to start crash round. Please try again.');
+          toast.error(error.response?.data?.error || 'Failed to start crash round. Please try again.');
           setIsPlaying(false);
           setMultiplier(1.00);
           setGameTimer(5);
@@ -150,7 +150,10 @@ export const DegenCrash = React.memo(() => {
       setIsPlaying(false);
       
       try {
-        await api.cashout(walletAddress.toString(), betAmount, currentMultiplier);
+        const response = await api.cashout(betAmount, currentMultiplier);
+        if (response.data.newBalance !== undefined) {
+          useCasinoStore.setState({ balance: response.data.newBalance });
+        }
         addBet('Crash', betAmount, currentMultiplier);
         sound.play('cashout');
         toast.success(`🎉 Won ${winAmount.toFixed(2)} SOL!`);
@@ -158,7 +161,7 @@ export const DegenCrash = React.memo(() => {
         setTimeout(() => setShowCoins(false), 2500);
       } catch (error) {
         console.error('Cashout failed:', error);
-        toast.error('Cashout failed, please try again.');
+        toast.error(error.response?.data?.error || 'Cashout failed, please try again.');
       }
       
       setMultiplier(1.00);
@@ -215,7 +218,7 @@ export const DegenCrash = React.memo(() => {
       <ConfirmModal
         isOpen={showConfirm}
         onConfirm={confirmBet}
-        onCancel={() => setShowConfirm(false)}
+        onClose={() => setShowConfirm(false)}
         message={`Place bet of ${pendingBet} SOL?`}
       />
 

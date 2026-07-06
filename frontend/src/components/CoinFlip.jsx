@@ -31,7 +31,7 @@ export const CoinFlip = React.memo(() => {
     sound.play('spin');
     
     try {
-      const response = await api.coinFlipResult(walletAddress.toString(), betAmount, 'HEADS');
+      const response = await api.coinFlipResult(betAmount, 'HEADS');
       const data = response.data;
       
       setTimeout(() => {

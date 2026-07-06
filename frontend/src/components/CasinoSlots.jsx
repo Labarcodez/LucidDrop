@@ -53,7 +53,7 @@ export const CasinoSlots = React.memo(() => {
     
     const handleSpinResult = async () => {
       try {
-        const response = await api.slotsResult(walletAddress.toString(), betAmount);
+        const response = await api.slotsResult(betAmount);
         const data = response.data;
         
         setReels(data.reels);

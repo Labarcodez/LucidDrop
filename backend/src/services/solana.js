@@ -1,6 +1,6 @@
 const { Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
 
-const connection = new Connection(process.env.SOLANA_RPC || 'https://api.mainnet-beta.solana.com');
+const connection = new Connection(process.env.SOLANA_RPC || 'https://api.devnet.solana.com');
 
 exports.getBalance = async (walletAddress) => {
   try {

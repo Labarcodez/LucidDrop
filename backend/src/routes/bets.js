@@ -40,6 +40,9 @@ router.post('/', authenticate, async (req, res) => {
 // ========================================
 router.get('/:wallet', authenticate, async (req, res) => {
   try {
+    if (req.params.wallet !== req.user.walletAddress) {
+      return res.status(403).json({ error: 'Unauthorized to view these bets' });
+    }
     const bets = await Bet.find({ walletAddress: req.params.wallet })
       .sort({ timestamp: -1 })
       .limit(50);

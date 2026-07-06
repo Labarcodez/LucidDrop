@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const solana = require('../services/solana');
 const { verifyWalletSignature, generateToken, authenticate } = require('../middleware/auth');
 
 // ========================================
@@ -29,16 +28,6 @@ router.post('/signin', async (req, res) => {
       await user.save();
     }
 
-    // Sync real balance from blockchain
-    try {
-      const realBalance = await solana.getBalance(walletAddress);
-      user.balance = realBalance;
-      await user.save();
-    } catch (err) {
-      // If chain call fails, log but continue with DB balance
-      console.warn('Failed to sync chain balance for', walletAddress, err?.message || err);
-    }
-
     return res.json({
       success: true,
       token,
@@ -60,14 +49,6 @@ router.get('/me', authenticate, async (req, res) => {
 
     let user = await User.findOne({ walletAddress });
     if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Optionally refresh balance
-    try {
-      user.balance = await solana.getBalance(walletAddress);
-      await user.save();
-    } catch (err) {
-      console.warn('Failed to refresh balance for', walletAddress);
-    }
 
     return res.json({ success: true, user: { walletAddress: user.walletAddress, balance: user.balance } });
   } catch (err) {

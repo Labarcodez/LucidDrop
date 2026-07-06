@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useCasinoStore } from '../store/useCasinoStore';
+import { ConnectionStatus } from './ConnectionStatus';
 import { sound } from '../utils/sound';
 
 const navItems = [
@@ -11,6 +13,8 @@ const navItems = [
 ];
 
 export const Layout = () => {
+  const balance = useCasinoStore((state) => state.balance);
+  const isAuthenticated = useCasinoStore((state) => state.isAuthenticated);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(() => {
     const saved = localStorage.getItem('luciddrop-sound-muted');
@@ -61,7 +65,7 @@ export const Layout = () => {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto text-[9px] text-gray-600 font-mono">SOL</div>
+        <div className="mt-auto text-[9px] text-gray-600 font-mono">DEVNET</div>
       </aside>
 
       {mobileMenuOpen && (
@@ -73,19 +77,25 @@ export const Layout = () => {
       )}
 
       <div className="flex-1 min-w-0">
-        <header className="border-b border-white/10 bg-black/50 backdrop-blur-xl px-4 md:px-6 py-3 flex justify-between items-center sticky top-0 z-10">
-          <div className="flex items-center gap-3 ml-10 lg:ml-0">
-            <h1 className="text-lg md:text-xl font-black tracking-tight">
+        <header className="border-b border-white/10 bg-black/50 backdrop-blur-xl px-4 md:px-6 py-3 flex justify-between items-center sticky top-0 z-10 gap-2">
+          <div className="flex items-center gap-3 ml-10 lg:ml-0 min-w-0">
+            <h1 className="text-lg md:text-xl font-black tracking-tight shrink-0">
               <span className="text-white">LUCID</span>
               <span className="text-[#00ff88]">.</span>
               <span className="text-gray-400 font-light">drop</span>
             </h1>
-            <span className="hidden sm:inline text-[9px] text-[#00ff88]/60 font-mono border border-[#00ff88]/20 px-2 py-0.5 rounded-full bg-[#00ff88]/5">
-              SOLANA CASINO
-            </span>
+            {isAuthenticated && (
+              <div className="hidden sm:flex items-center gap-2 glass-card px-3 py-1.5 rounded-xl border border-[#00ff88]/20">
+                <span className="text-[10px] text-gray-500 font-mono">BAL</span>
+                <span className="text-sm font-black text-neon-green font-mono">
+                  {balance.toFixed(4)} SOL
+                </span>
+              </div>
+            )}
+            <ConnectionStatus />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="px-3 py-2 glass-card rounded-xl text-gray-300 text-sm hover:border-[#00ff88]/30 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -103,12 +113,12 @@ export const Layout = () => {
 
             <button
               onClick={() => document.querySelector('[data-deposit]')?.click()}
-              className="px-4 py-2 neon-btn-green rounded-xl text-sm min-h-[44px] bet-pulse"
+              className="hidden sm:block px-4 py-2 neon-btn-green rounded-xl text-sm min-h-[44px] bet-pulse"
             >
               💰 Deposit
             </button>
 
-            <WalletMultiButton className="!neon-btn-green !rounded-xl !font-bold !px-4 !py-2 !min-h-[44px]" />
+            <WalletMultiButton className="!neon-btn-green !rounded-xl !font-bold !px-3 md:!px-4 !py-2 !min-h-[44px] !text-sm" />
           </div>
         </header>
 

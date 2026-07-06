@@ -31,13 +31,13 @@ const GameStatRow = ({ name, played, won }) => {
 };
 
 export const StatisticsDashboard = () => {
-  const { publicKey, token } = useCasinoStore();
+  const { publicKey, isAuthenticated } = useCasinoStore();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!publicKey || !token) {
+    if (!publicKey || !isAuthenticated) {
       setLoading(false);
       return;
     }
@@ -45,9 +45,7 @@ export const StatisticsDashboard = () => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/users/stats', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get('/users/stats');
         if (response.data.success) {
           setStats(response.data.stats);
         }
@@ -60,7 +58,7 @@ export const StatisticsDashboard = () => {
     };
 
     fetchStats();
-  }, [publicKey, token]);
+  }, [publicKey, isAuthenticated]);
 
   if (!publicKey) {
     return (

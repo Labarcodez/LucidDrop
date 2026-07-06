@@ -5,6 +5,12 @@ const logger = require('../utils/logger');
 
 class SolanaListener {
   constructor() {
+    if (!process.env.SOLANA_RPC) {
+      throw new Error('SOLANA_RPC is not set');
+    }
+    if (!process.env.CASINO_WALLET_PUBLIC_KEY) {
+      throw new Error('CASINO_WALLET_PUBLIC_KEY is not set');
+    }
     this.connection = new Connection(process.env.SOLANA_RPC, 'confirmed');
     this.casinoPublicKey = new PublicKey(process.env.CASINO_WALLET_PUBLIC_KEY);
     this.subscriptionId = null;

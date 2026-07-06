@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useCasinoStore } from '../store/useCasinoStore';
 import { api } from '../services/api';
 import toast from 'react-hot-toast';
 import { sound } from '../utils/sound';
 import { Confetti } from './Confetti';
-import { useLoading } from '../hooks/useLoading';
 
 const symbols = ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣', '⭐', '🎰'];
 
@@ -98,11 +97,12 @@ export const CasinoSlots = React.memo(() => {
   }, [spinning, walletAddress, betAmount, balance, reels, addBet]);
 
   return (
-    <div className="bg-[#0d0d14] rounded-2xl border border-[#00ff88]/20 p-6 shadow-[0_0_60px_rgba(0,255,136,0.03)]">
+    <div className="glass-card neon-border-purple p-6 glow-pulse-green">
       <Confetti active={showConfetti} onComplete={() => setShowConfetti(false)} />
 
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xs font-mono text-[#00ff88]/60 tracking-widest">🎰 SLOTS</h3>
+        <h3 className="text-xs font-mono text-[#00ff88] tracking-widest font-bold">🎰 SLOTS</h3>
+        <span className="text-[10px] font-mono text-gray-500">{balance.toFixed(4)} SOL</span>
       </div>
 
       <div className="flex items-center gap-2 mb-4">
@@ -133,12 +133,14 @@ export const CasinoSlots = React.memo(() => {
         </div>
       </div>
 
-      <div className="flex justify-center gap-4 mb-4 py-4 bg-black/40 rounded-xl border border-[#00ff88]/5">
+      <div className="flex justify-center gap-4 mb-4 py-4 bg-black/50 rounded-xl border border-[#00ff88]/10">
         {reels.map((symbol, i) => (
           <div
             key={i}
-            className={`w-20 h-20 bg-black/60 border rounded-xl flex items-center justify-center text-5xl transition-all duration-100 ${
-              spinning ? 'border-[#00ff88]/30 shadow-[0_0_30px_rgba(0,255,136,0.05)]' : 'border-gray-700'
+            className={`w-20 h-20 bg-black/70 border rounded-xl flex items-center justify-center text-5xl transition-all duration-100 ${
+              spinning
+                ? 'border-[#00ff88]/50 shadow-[0_0_40px_rgba(0,255,136,0.15)] animate-pulse'
+                : 'border-white/10'
             }`}
           >
             {symbol}
@@ -166,10 +168,10 @@ export const CasinoSlots = React.memo(() => {
       <button
         onClick={spin}
         disabled={spinning}
-        className={`w-full py-3.5 rounded-xl font-bold transition-all duration-200 ${
+        className={`w-full py-4 rounded-xl font-black text-lg transition-all duration-200 ${
           spinning
-            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-            : 'bg-[#00ff88]/10 hover:bg-[#00ff88]/20 border border-[#00ff88]/30 text-[#00ff88] hover:scale-[1.02]'
+            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            : 'neon-btn-green bet-pulse hover:scale-[1.02]'
         }`}
       >
         {spinning ? '🌀 SPINNING...' : '🔄 SPIN'}

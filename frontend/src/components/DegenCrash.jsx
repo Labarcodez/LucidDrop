@@ -253,6 +253,24 @@ export const DegenCrash = React.memo(() => {
       )}
 
       <div className="text-center py-8 relative">
+        <div className="absolute inset-x-4 top-0 h-24 pointer-events-none">
+          <svg viewBox="0 0 400 80" className="w-full h-full" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="crashCurve" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#00ff88" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#ff00cc" stopOpacity="0.8" />
+              </linearGradient>
+            </defs>
+            <path
+              d={`M 0 80 L ${Math.min(380, multiplier * 40)} ${Math.max(5, 80 - Math.log(multiplier + 1) * 35)}`}
+              fill="none"
+              stroke="url(#crashCurve)"
+              strokeWidth="3"
+              className={isPlaying ? 'opacity-100' : 'opacity-20'}
+              style={{ filter: isPlaying ? 'drop-shadow(0 0 8px rgba(0,255,136,0.6))' : 'none' }}
+            />
+          </svg>
+        </div>
         <div
           className={`text-9xl font-black multiplier-display tracking-tight transition-all duration-75 ${
             isPlaying ? 'text-[#00ff88] drop-shadow-[0_0_60px_rgba(0,255,136,0.3)] multiplier-pop' :

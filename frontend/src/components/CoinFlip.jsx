@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useCasinoStore } from '../store/useCasinoStore';
 import { api } from '../services/api';
 import toast from 'react-hot-toast';
 import { sound } from '../utils/sound';
-// import { useLoading } from '../hooks/useLoading';
 
 export const CoinFlip = React.memo(() => {
   const [result, setResult] = useState(null);
@@ -60,8 +59,8 @@ export const CoinFlip = React.memo(() => {
   }, [flipping, walletAddress, betAmount, balance, addBet]);
 
   return (
-    <div className="bg-[#0d0d14] rounded-2xl border border-[#00ff88]/20 p-6 shadow-[0_0_60px_rgba(0,255,136,0.03)]">
-      <h3 className="text-xs font-mono text-[#00ff88]/60 tracking-widest mb-4">🪙 COIN FLIP</h3>
+    <div className="glass-card neon-border-purple p-6 glow-blue">
+      <h3 className="text-xs font-mono text-[#00ccff] tracking-widest font-bold mb-4">🪙 COIN FLIP</h3>
       
       <div className="flex items-center gap-2 mb-4">
         <label className="text-xs text-gray-500 font-mono">BET (SOL):</label>
@@ -107,10 +106,10 @@ export const CoinFlip = React.memo(() => {
       <button
         onClick={flip}
         disabled={flipping}
-        className={`w-full py-3.5 rounded-xl font-bold transition-all duration-200 ${
+        className={`w-full py-4 rounded-xl font-black text-lg transition-all duration-200 ${
           flipping
-            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-            : 'bg-[#00ccff]/10 hover:bg-[#00ccff]/20 border border-[#00ccff]/30 text-[#00ccff] hover:scale-[1.02]'
+            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            : 'neon-btn-pink bet-pulse hover:scale-[1.02]'
         }`}
       >
         {flipping ? 'FLIPPING...' : '🪙 FLIP'}

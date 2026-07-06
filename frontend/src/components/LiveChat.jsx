@@ -43,6 +43,12 @@ export const LiveChat = () => {
   }, []);
 
   useEffect(() => {
+    if (wallet.publicKey && socketRef.current?.connected) {
+      socketRef.current.emit('join', wallet.publicKey.toString());
+    }
+  }, [wallet.publicKey, connected]);
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -91,8 +97,11 @@ export const LiveChat = () => {
             <span className="text-xs font-mono text-[#00ff88] tracking-widest font-bold">
               💬 LIVE CHAT
             </span>
-            <span className="text-[10px] text-gray-500">
+            <span className="text-[10px] text-gray-500 flex items-center gap-1">
               {connected ? '🟢 live' : '🔴 offline'}
+              {reactions.map((r, i) => (
+                <span key={`${r}-${i}`} className="text-sm animate-bounce">{r}</span>
+              ))}
             </span>
           </div>
 

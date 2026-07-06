@@ -53,10 +53,11 @@ LucidDrop is deployed using a free-tier stack:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MONGODB_URI` | MongoDB Atlas connection string | `mongodb+srv://...` |
-| `SOLANA_RPC_URL` | Solana RPC endpoint | `https://api.mainnet-beta.solana.com` |
-| `WALLET_PRIVATE_KEY` | Encrypted wallet key | `[61,87,...]` |
+| `SOLANA_RPC` | Solana RPC endpoint | `https://api.mainnet-beta.solana.com` |
+| `CASINO_PRIVATE_KEY` | Base58 casino wallet secret | `5J...` |
+| `CASINO_WALLET_PUBLIC_KEY` | Casino wallet public key | `7xKX...` |
 | `JWT_SECRET` | JWT signing secret | `your-secret-here` |
-| `CORS_ORIGIN` | Allowed frontend origin | `https://luciddrop.vercel.app` |
+| `FRONTEND_URL` | Allowed frontend origin (CORS + Socket.io) | `https://luciddrop.vercel.app` |
 | `NODE_ENV` | Environment | `production` |
 
 > **Note:** Render will automatically deploy on push to the `main` branch.
@@ -80,7 +81,8 @@ LucidDrop is deployed using a free-tier stack:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `REACT_APP_API_URL` | Render backend URL | `https://luciddrop-backend.onrender.com/api` |
+| `REACT_APP_API_URL` | Render backend URL | `https://luciddrop-backend.onrender.com` |
+| `REACT_APP_WS_URL` | Socket.io WebSocket URL | `wss://luciddrop-backend.onrender.com` |
 
 > **Note:** Vercel will automatically deploy on push to the `main` branch.
 
@@ -134,7 +136,7 @@ vercel --prod
 ## 6. Monitoring (Free Tier)
 
 ### Health Check
-- Render provides built-in health checks at `/health`.
+- Render health check: `/api/health`
 - Use [UptimeRobot](https://uptimerobot.com) (free) to monitor the backend URL.
 
 ### Error Tracking
@@ -151,16 +153,18 @@ vercel --prod
 ### Backend (Render)
 ```
 MONGODB_URI=mongodb+srv://...
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-WALLET_PRIVATE_KEY=[61,87,...]
+SOLANA_RPC=https://api.mainnet-beta.solana.com
+CASINO_PRIVATE_KEY=<base58-secret>
+CASINO_WALLET_PUBLIC_KEY=<public-key>
 JWT_SECRET=your-secret-here
-CORS_ORIGIN=https://luciddrop.vercel.app
+FRONTEND_URL=https://luciddrop.vercel.app
 NODE_ENV=production
 ```
 
 ### Frontend (Vercel)
 ```
-REACT_APP_API_URL=https://luciddrop-backend.onrender.com/api
+REACT_APP_API_URL=https://luciddrop-backend.onrender.com
+REACT_APP_WS_URL=wss://luciddrop-backend.onrender.com
 ```
 
 ---
@@ -188,7 +192,7 @@ REACT_APP_API_URL=https://luciddrop-backend.onrender.com/api
 
 - **Frontend:** `https://luciddrop.vercel.app` (or your custom domain)
 - **Backend:** `https://luciddrop-backend.onrender.com`
-- **Health Check:** `https://luciddrop-backend.onrender.com/health`
+- **Health Check:** `https://luciddrop-backend.onrender.com/api/health`
 
 ---
 

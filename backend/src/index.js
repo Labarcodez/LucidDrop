@@ -129,8 +129,17 @@ server.listen(PORT, () => {
   logger.info(`🚀 Backend running on port ${PORT}`);
 });
 
-// Start deposit listener
-const listener = new SolanaListener();
-listener.start();
+// Start deposit listener (optional until Solana env is configured)
+let listener = null;
+if (process.env.SOLANA_RPC && process.env.CASINO_WALLET_PUBLIC_KEY) {
+  try {
+    listener = new SolanaListener();
+    listener.start().catch((err) => logger.error('❌ Deposit listener error:', err));
+  } catch (err) {
+    logger.warn('⚠️ Deposit listener disabled:', err.message);
+  }
+} else {
+  logger.warn('⚠️ Deposit listener disabled — set SOLANA_RPC and CASINO_WALLET_PUBLIC_KEY');
+}
 
 module.exports = { io, listener };

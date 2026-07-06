@@ -9,15 +9,17 @@ services:
     envVars:
       - key: MONGODB_URI
         sync: false
-      - key: SOLANA_RPC_URL
+      - key: SOLANA_RPC
         sync: false
-      - key: WALLET_PRIVATE_KEY
+      - key: CASINO_PRIVATE_KEY
+        sync: false
+      - key: CASINO_WALLET_PUBLIC_KEY
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: CORS_ORIGIN
+      - key: FRONTEND_URL
         sync: false
       - key: NODE_ENV
         value: production
-    healthCheckPath: /health
+    healthCheckPath: /api/health
     autoDeploy: true

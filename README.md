@@ -87,6 +87,14 @@ Open [http://localhost:3000](http://localhost:3000).
 | `REACT_APP_API_URL` | frontend | Backend API (e.g. `http://localhost:5000`) |
 | `REACT_APP_WS_URL` | frontend | WebSocket URL (e.g. `ws://localhost:5000`) |
 
+## Free RPC Options (Development)
+
+| Provider | URL | Notes |
+|----------|-----|-------|
+| Public devnet | `https://api.devnet.solana.com` | Free, rate-limited |
+| Helius free tier | `https://devnet.helius-rpc.com/?api-key=YOUR_KEY` | [helius.dev](https://helius.dev) — 100k credits/mo |
+| Mainnet (prod) | `https://api.mainnet-beta.solana.com` | Use paid RPC for production traffic |
+
 ## Free Tier Deployment
 
 - **Backend:** [Render](https://render.com) free web service
